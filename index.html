@@ -3,31 +3,30 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>XAUUSD Martingale Calculator</title>
+    <title>XAUUSD Martingale Pro Calculator</title>
     <style>
         :root { --primary: #2563eb; --danger: #dc2626; --success: #16a34a; --bg: #f8fafc; }
         body { font-family: 'Inter', sans-serif; background-color: var(--bg); display: flex; justify-content: center; padding: 20px; line-height: 1.6; }
-        .card { background: white; padding: 2rem; border-radius: 1rem; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.1); width: 100%; max-width: 550px; }
+        .card { background: white; padding: 2rem; border-radius: 1rem; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.1); width: 100%; max-width: 600px; }
         h2 { text-align: center; color: #1e293b; margin-bottom: 1.5rem; border-bottom: 3px solid var(--primary); padding-bottom: 0.5rem; }
         .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 20px; }
         label { display: block; font-size: 0.875rem; font-weight: 600; color: #475569; margin-bottom: 0.25rem; }
         input { width: 100%; padding: 0.75rem; border: 1px solid #e2e8f0; border-radius: 0.5rem; box-sizing: border-box; font-size: 1rem; transition: all 0.2s; }
-        input:focus { outline: none; border-color: var(--primary); ring: 2px solid #bfdbfe; }
-        button { width: 100%; padding: 1rem; background: var(--primary); color: white; border: none; border-radius: 0.5rem; font-weight: bold; cursor: pointer; font-size: 1rem; margin-top: 10px; }
-        button:hover { background: #1d4ed8; }
+        input:focus { outline: none; border-color: var(--primary); box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1); }
         table { width: 100%; border-collapse: collapse; margin-top: 25px; font-size: 0.9rem; }
-        th { background: #f1f5f9; padding: 12px; text-align: left; color: #64748b; text-transform: uppercase; font-size: 0.75rem; }
-        td { padding: 12px; border-bottom: 1px solid #f1f5f9; }
+        th { background: #f1f5f9; padding: 12px; text-align: center; color: #64748b; text-transform: uppercase; font-size: 0.75rem; }
+        td { padding: 12px; border-bottom: 1px solid #f1f5f9; text-align: center; }
         .lot-val { font-weight: 800; color: var(--primary); }
         .loss-val { color: var(--danger); }
         .profit-val { color: var(--success); font-weight: bold; }
         .status-box { margin-top: 20px; padding: 1rem; border-radius: 0.5rem; text-align: center; font-weight: bold; }
+        .info-text { font-size: 0.75rem; color: #94a3b8; margin-top: 5px; }
     </style>
 </head>
 <body>
 
 <div class="card">
-    <h2>📊 แผนแก้พอร์ต 4 ไม้ (Gold)</h2>
+    <h2>📊 แผนแก้พอร์ต Smart Lot</h2>
     
     <div class="grid">
         <div>
@@ -35,8 +34,8 @@
             <input type="number" id="capital" value="100" oninput="calculate()">
         </div>
         <div>
-            <label>เป้ากำไร/รอบ (USD)</label>
-            <input type="number" id="target" value="5" oninput="calculate()">
+            <label>Lot เริ่มต้น (ไม้ 1)</label>
+            <input type="number" id="start_lot" value="0.01" step="0.01" oninput="calculate()">
         </div>
         <div>
             <label>ระยะ SL (Points)</label>
@@ -47,6 +46,8 @@
             <input type="number" id="tp_points" value="500" oninput="calculate()">
         </div>
     </div>
+    
+    <p class="info-text">*ระบบจะคำนวณไม้ 2-4 ให้เพื่อเอาคืนยอดเสียทั้งหมด + กำไรจากไม้แรก</p>
 
     <div id="result_table"></div>
     <div id="status" class="status-box"></div>
@@ -55,7 +56,7 @@
 <script>
 function calculate() {
     const capital = parseFloat(document.getElementById('capital').value) || 0;
-    const target = parseFloat(document.getElementById('target').value) || 0;
+    const startLot = parseFloat(document.getElementById('start_lot').value) || 0.01;
     const sl = parseFloat(document.getElementById('sl_points').value) || 1;
     const tp = parseFloat(document.getElementById('tp_points').value) || 1;
 
@@ -69,51 +70,57 @@ function calculate() {
                     </tr>
                 </thead><tbody>`;
 
-    let totalLoss = 0;
+    let totalLossAccum = 0;
+    let firstWinProfit = (startLot * (tp / 100)); // กำไรเป้าหมายอ้างอิงจากไม้แรก
     let canTrade = true;
 
     for (let i = 1; i <= 4; i++) {
-        // สูตร: (ขาดทุนสะสม + กำไรเป้าหมาย) / (ระยะ TP ในหน่วยเงินต่อ 1 lot)
-        // XAUUSD: 1.00 lot วิ่ง 100 จุด = 100 USD | ดังนั้น 1 จุด = 1 USD ต่อ 1.00 lot
-        // หรือคิดง่ายๆ: Lot = (LossAccum + Target) / (TP_Points / 100 * 100) -> Lot = (LossAccum + Target) / TP_Points
+        let currentLot;
         
-        let requiredLot = (totalLoss + target) / (tp / 100);
-        requiredLot = Math.ceil(requiredLot * 100) / 100; // ปัดขึ้นเป็นทศนิยม 2 ตำแหน่ง
+        if (i === 1) {
+            currentLot = startLot;
+        } else {
+            // สูตรทบไม้: (เสียสะสม + กำไรเป้าหมายไม้แรก) / (กำไรต่อ 1 lot ของระยะ TP)
+            currentLot = (totalLossAccum + firstWinProfit) / (tp / 100);
+            currentLot = Math.ceil(currentLot * 100) / 100; // ปัดเศษขึ้น 2 ตำแหน่ง
+        }
         
-        if (requiredLot < 0.01) requiredLot = 0.01;
+        if (currentLot < 0.01) currentLot = 0.01;
 
-        let potentialLoss = (requiredLot * (sl / 100));
-        let potentialWin = (requiredLot * (tp / 100));
-        let netProfit = potentialWin - totalLoss;
+        let potentialLoss = (currentLot * (sl / 100));
+        let potentialWin = (currentLot * (tp / 100));
+        let netProfitIfWin = potentialWin - totalLossAccum;
         
-        totalLoss += potentialLoss;
+        totalLossAccum += potentialLoss;
 
         html += `<tr>
             <td>${i}</td>
-            <td class="lot-val">${requiredLot.toFixed(2)}</td>
-            <td class="loss-val">-${totalLoss.toFixed(2)}</td>
-            <td class="profit-val">+${netProfit.toFixed(2)}</td>
+            <td class="lot-val">${currentLot.toFixed(2)}</td>
+            <td class="loss-val">-${totalLossAccum.toFixed(2)}</td>
+            <td class="profit-val">+${netProfitIfWin.toFixed(2)}</td>
         </tr>`;
         
-        if (totalLoss > capital) canTrade = false;
+        if (totalLossAccum > capital) canTrade = false;
     }
 
     html += `</tbody></table>`;
     document.getElementById('result_table').innerHTML = html;
 
     const statusDiv = document.getElementById('status');
+    const riskPercent = ((totalLossAccum / capital) * 100).toFixed(1);
+
     if (canTrade) {
         statusDiv.style.backgroundColor = '#dcfce7';
         statusDiv.style.color = '#166534';
-        statusDiv.innerText = `✅ แผนนี้ใช้ได้ (ความเสี่ยง ${((totalLoss/capital)*100).toFixed(1)}%)`;
+        statusDiv.innerText = `✅ แผนนี้รอด (ใช้ทุนทั้งหมด ${riskPercent}%)`;
     } else {
         statusDiv.style.backgroundColor = '#fee2e2';
         statusDiv.style.color = '#991b1b';
-        statusDiv.innerText = `❌ ทุนไม่พอ! เสี่ยงเกิน 100%`;
+        statusDiv.innerText = `❌ เสี่ยงเกินทุน! (${riskPercent}%)`;
     }
 }
 
-calculate(); // รันครั้งแรก
+calculate();
 </script>
 
 </body>
