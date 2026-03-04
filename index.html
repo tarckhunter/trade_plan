@@ -3,34 +3,34 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>XAUUSD Martingale Pro Calculator</title>
+    <title>XAUUSD 4-Step Calculator (100 pts = 1 USD)</title>
     <style>
-        :root { --primary: #2563eb; --danger: #dc2626; --success: #16a34a; --bg: #f8fafc; }
-        body { font-family: 'Inter', sans-serif; background-color: var(--bg); display: flex; justify-content: center; padding: 20px; line-height: 1.6; }
-        .card { background: white; padding: 2rem; border-radius: 1rem; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.1); width: 100%; max-width: 600px; }
-        h2 { text-align: center; color: #1e293b; margin-bottom: 1.5rem; border-bottom: 3px solid var(--primary); padding-bottom: 0.5rem; }
+        :root { --primary: #2563eb; --danger: #dc2626; --success: #16a34a; --bg: #f1f5f9; }
+        body { font-family: 'Tahoma', sans-serif; background-color: var(--bg); display: flex; justify-content: center; padding: 20px; }
+        .card { background: white; padding: 25px; border-radius: 15px; box-shadow: 0 10px 15px rgba(0,0,0,0.1); width: 100%; max-width: 600px; }
+        h2 { text-align: center; color: #1e293b; margin-bottom: 20px; border-bottom: 4px solid var(--primary); padding-bottom: 10px; }
         .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 20px; }
-        label { display: block; font-size: 0.875rem; font-weight: 600; color: #475569; margin-bottom: 0.25rem; }
-        input { width: 100%; padding: 0.75rem; border: 1px solid #e2e8f0; border-radius: 0.5rem; box-sizing: border-box; font-size: 1rem; transition: all 0.2s; }
-        input:focus { outline: none; border-color: var(--primary); box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1); }
-        table { width: 100%; border-collapse: collapse; margin-top: 25px; font-size: 0.9rem; }
-        th { background: #f1f5f9; padding: 12px; text-align: center; color: #64748b; text-transform: uppercase; font-size: 0.75rem; }
-        td { padding: 12px; border-bottom: 1px solid #f1f5f9; text-align: center; }
-        .lot-val { font-weight: 800; color: var(--primary); }
-        .loss-val { color: var(--danger); }
-        .profit-val { color: var(--success); font-weight: bold; }
-        .status-box { margin-top: 20px; padding: 1rem; border-radius: 0.5rem; text-align: center; font-weight: bold; }
-        .info-text { font-size: 0.75rem; color: #94a3b8; margin-top: 5px; }
+        label { display: block; font-size: 0.9rem; font-weight: bold; color: #475569; margin-bottom: 5px; }
+        input { width: 100%; padding: 12px; border: 2px solid #e2e8f0; border-radius: 8px; box-sizing: border-box; font-size: 1rem; }
+        input:focus { outline: none; border-color: var(--primary); }
+        table { width: 100%; border-collapse: collapse; margin-top: 20px; background: #fff; }
+        th { background: #1e293b; color: white; padding: 12px; font-size: 0.85rem; }
+        td { padding: 12px; border: 1px solid #e2e8f0; text-align: center; font-weight: 500; }
+        .lot-col { color: var(--primary); font-weight: bold; font-size: 1.1rem; }
+        .loss-col { color: var(--danger); }
+        .profit-col { color: var(--success); font-weight: bold; }
+        .status { margin-top: 20px; padding: 15px; border-radius: 8px; text-align: center; font-weight: bold; }
+        .note { font-size: 0.8rem; color: #64748b; margin-top: 10px; text-align: center; }
     </style>
 </head>
 <body>
 
 <div class="card">
-    <h2>📊 แผนแก้พอร์ต Smart Lot</h2>
+    <h2>🏆 คำนวณ Lot แก้พอร์ต (4 ไม้)</h2>
     
     <div class="grid">
         <div>
-            <label>ทุนปัจจุบัน (USD)</label>
+            <label>ทุนที่มี (USD)</label>
             <input type="number" id="capital" value="100" oninput="calculate()">
         </div>
         <div>
@@ -39,40 +39,40 @@
         </div>
         <div>
             <label>ระยะ SL (Points)</label>
-            <input type="number" id="sl_points" value="500" oninput="calculate()">
+            <input type="number" id="sl_pts" value="500" oninput="calculate()">
         </div>
         <div>
             <label>ระยะ TP (Points)</label>
-            <input type="number" id="tp_points" value="500" oninput="calculate()">
+            <input type="number" id="tp_pts" value="500" oninput="calculate()">
         </div>
     </div>
-    
-    <p class="info-text">*ระบบจะคำนวณไม้ 2-4 ให้เพื่อเอาคืนยอดเสียทั้งหมด + กำไรจากไม้แรก</p>
 
-    <div id="result_table"></div>
-    <div id="status" class="status-box"></div>
+    <div id="table_area"></div>
+    <div id="status_box" class="status"></div>
+    
+    <p class="note">สูตร: 100 Points = 1 USD (ต่อ 0.01 Lot)</p>
 </div>
 
 <script>
 function calculate() {
     const capital = parseFloat(document.getElementById('capital').value) || 0;
     const startLot = parseFloat(document.getElementById('start_lot').value) || 0.01;
-    const sl = parseFloat(document.getElementById('sl_points').value) || 1;
-    const tp = parseFloat(document.getElementById('tp_points').value) || 1;
+    const sl = parseFloat(document.getElementById('sl_pts').value) || 1;
+    const tp = parseFloat(document.getElementById('tp_pts').value) || 1;
 
     let html = `<table>
                 <thead>
                     <tr>
-                        <th>ไม้</th>
+                        <th>ไม้ที่</th>
                         <th>Lot Size</th>
                         <th>ขาดทุนสะสม</th>
                         <th>กำไรสุทธิ</th>
                     </tr>
                 </thead><tbody>`;
 
-    let totalLossAccum = 0;
-    let firstWinProfit = (startLot * (tp / 100)); // กำไรเป้าหมายอ้างอิงจากไม้แรก
-    let canTrade = true;
+    let totalLossUSD = 0;
+    // กำไรเป้าหมายที่อิงจากไม้แรก (ไม้ 1 ชนะได้เงินเท่าไหร่ ไม้อื่นๆ ต้องได้กำไรสุทธิเท่ากัน)
+    let targetProfitUSD = (startLot * 100) * (tp / 100); 
 
     for (let i = 1; i <= 4; i++) {
         let currentLot;
@@ -80,43 +80,43 @@ function calculate() {
         if (i === 1) {
             currentLot = startLot;
         } else {
-            // สูตรทบไม้: (เสียสะสม + กำไรเป้าหมายไม้แรก) / (กำไรต่อ 1 lot ของระยะ TP)
-            currentLot = (totalLossAccum + firstWinProfit) / (tp / 100);
+            // สูตรทบ: (ทุนที่เสียไปแล้ว + กำไรที่อยากได้) / (กำไรต่อ 1 lot ของระยะ TP)
+            // กำไรต่อ 1 lot = (1.00 * 100) * (tp / 100) = tp
+            currentLot = (totalLossUSD + targetProfitUSD) / (tp / 1); 
             currentLot = Math.ceil(currentLot * 100) / 100; // ปัดเศษขึ้น 2 ตำแหน่ง
         }
-        
+
         if (currentLot < 0.01) currentLot = 0.01;
 
-        let potentialLoss = (currentLot * (sl / 100));
-        let potentialWin = (currentLot * (tp / 100));
-        let netProfitIfWin = potentialWin - totalLossAccum;
+        // คำนวณเป็น USD: Lot * (Points/100)
+        let lossThisTurn = currentLot * (sl / 1);
+        let winThisTurn = currentLot * (tp / 1);
+        let netProfit = winThisTurn - totalLossUSD;
         
-        totalLossAccum += potentialLoss;
+        totalLossUSD += lossThisTurn;
 
         html += `<tr>
             <td>${i}</td>
-            <td class="lot-val">${currentLot.toFixed(2)}</td>
-            <td class="loss-val">-${totalLossAccum.toFixed(2)}</td>
-            <td class="profit-val">+${netProfitIfWin.toFixed(2)}</td>
+            <td class="lot-col">${currentLot.toFixed(2)}</td>
+            <td class="loss-col">${totalLossUSD.toFixed(2)} USD</td>
+            <td class="profit-col">${netProfit.toFixed(2)} USD</td>
         </tr>`;
-        
-        if (totalLossAccum > capital) canTrade = false;
     }
 
     html += `</tbody></table>`;
-    document.getElementById('result_table').innerHTML = html;
+    document.getElementById('table_area').innerHTML = html;
 
-    const statusDiv = document.getElementById('status');
-    const riskPercent = ((totalLossAccum / capital) * 100).toFixed(1);
+    const statusBox = document.getElementById('status_box');
+    const riskPercent = (totalLossUSD / capital * 100).toFixed(1);
 
-    if (canTrade) {
-        statusDiv.style.backgroundColor = '#dcfce7';
-        statusDiv.style.color = '#166534';
-        statusDiv.innerText = `✅ แผนนี้รอด (ใช้ทุนทั้งหมด ${riskPercent}%)`;
+    if (totalLossUSD <= capital) {
+        statusBox.style.background = '#dcfce7';
+        statusBox.style.color = '#166534';
+        statusBox.innerHTML = `✅ แผนผ่าน! ใช้ทุนค้ำทั้งหมด ${totalLossUSD.toFixed(2)} USD (${riskPercent}%)`;
     } else {
-        statusDiv.style.backgroundColor = '#fee2e2';
-        statusDiv.style.color = '#991b1b';
-        statusDiv.innerText = `❌ เสี่ยงเกินทุน! (${riskPercent}%)`;
+        statusBox.style.background = '#fee2e2';
+        statusBox.style.color = '#991b1b';
+        statusBox.innerHTML = `❌ ทุนไม่พอ! เสี่ยงเกินไป (${riskPercent}%)`;
     }
 }
 
